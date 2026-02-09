@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  LIBRARIAN
+  TEACHER
+  STUDENT
+}
+
+enum BookType {
+  BOOK
+  TEXTBOOK
+  REFERENCE
+  MAGAZINE
+  DIGITAL
+}
+
+enum BookCondition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+}
+
+enum CopyStatus {
+  AVAILABLE
+  ISSUED
+  RESERVED
+  LOST
+  DAMAGED
+}
+
+enum TransactionStatus {
+  ISSUED
+  RETURNED
+  OVERDUE
+  LOST
+}
+
+enum ReservationStatus {
+  PENDING
+  FULFILLED
+  CANCELLED
+  EXPIRED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student    Student?
+  staff      Staff?
+  auditLogs  AuditLog[]
+  issuedBooks Transaction[] @relation("IssuedBy")
+}
+
+model AcademicYear {
+  id        String   @id @default(cuid())
+  year      String   @unique
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  students Student[]
+}
+
+model Student {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  admissionNumber String   @unique
+  class           String
+  section         String
+  academicYearId  String
+  parentPhone     String?
+  address         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  transactions Transaction[]
+  reservations Reservation[]
+}
+
+model Staff {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  staffId    String   @unique
+  department String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  reservations Reservation[]
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  books Book[]
+}
+
+model Book {
+  id              String   @id @default(cuid())
+  isbn            String?  @unique
+  title           String
+  author          String
+  publisher       String?
+  edition         String?
+  year            Int?
+  categoryId      String
+  language        String   @default("English")
+  type            BookType @default(BOOK)
+  description     String?
+  coverImage      String?
+  totalCopies     Int      @default(1)
+  availableCopies Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  category     Category      @relation(fields: [categoryId], references: [id])
+  copies       BookCopy[]
+  reservations Reservation[]
+}
+
+model BookCopy {
+  id              String        @id @default(cuid())
+  bookId          String
+  accessionNumber String        @unique
+  barcode         String?       @unique
+  condition       BookCondition @default(GOOD)
+  status          CopyStatus    @default(AVAILABLE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  book         Book          @relation(fields: [bookId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id         String            @id @default(cuid())
+  bookCopyId String
+  studentId  String?
+  staffId    String?
+  issueDate  DateTime          @default(now())
+  dueDate    DateTime
+  returnDate DateTime?
+  status     TransactionStatus @default(ISSUED)
+  renewCount Int               @default(0)
+  renewedAt  DateTime?
+  issuedById String
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  bookCopy BookCopy @relation(fields: [bookCopyId], references: [id])
+  student  Student? @relation(fields: [studentId], references: [id])
+  staff    Staff?   @relation(fields: [staffId], references: [id])
+  issuedBy User     @relation("IssuedBy", fields: [issuedById], references: [id])
+  fine     Fine?
+}
+
+model Fine {
+  id            String    @id @default(cuid())
+  transactionId String    @unique
+  amount        Decimal   @db.Decimal(10, 2)
+  isPaid        Boolean   @default(false)
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+}
+
+model Reservation {
+  id         String            @id @default(cuid())
+  bookId     String
+  studentId  String?
+  staffId    String?
+  reservedAt DateTime          @default(now())
+  expiresAt  DateTime
+  status     ReservationStatus @default(PENDING)
+
+  book    Book     @relation(fields: [bookId], references: [id])
+  student Student? @relation(fields: [studentId], references: [id])
+  staff   Staff?   @relation(fields: [staffId], references: [id])
+}
+
+model Settings {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  value       String
+  description String?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
