@@ -110,6 +110,10 @@ echo "   User: $DB_USER"
 echo "   Password: $DB_PASSWORD"
 echo ""
 
+# Generate Prisma Client
+echo "🗄️  Generating Prisma Client..."
+npx prisma generate
+
 # Run Prisma migrations
 echo "🗄️  Running database migrations..."
 npx prisma migrate deploy
