@@ -39,9 +39,11 @@ brew update
 echo "📦 Installing required packages..."
 brew install node@20 postgresql@16 nginx
 
-# Add Node.js to PATH
+# Add Node.js and PostgreSQL to PATH
 echo 'export PATH="/opt/homebrew/opt/node@20/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"' >> ~/.zshrc
 export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
+export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
 
 echo "Node version: $(node --version)"
 echo "npm version: $(npm --version)"
@@ -80,11 +82,15 @@ DB_NAME="school_library"
 DB_USER="school_library_user"
 DB_PASSWORD=$(openssl rand -base64 32)
 
-# Create database and user
-psql postgres -c "CREATE DATABASE $DB_NAME;" 2>/dev/null || echo "Database already exists"
-psql postgres -c "CREATE USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';" 2>/dev/null || echo "User already exists"
-psql postgres -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
-psql postgres -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;"
+# Use full path to psql (connect to template1 which always exists)
+PSQL="/opt/homebrew/opt/postgresql@16/bin/psql"
+
+# Create database and user (using template1 database which always exists)
+$PSQL -d template1 -c "CREATE DATABASE $DB_NAME;" 2>/dev/null || echo "Database already exists"
+$PSQL -d template1 -c "CREATE USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';" 2>/dev/null || echo "User already exists"
+$PSQL -d template1 -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+$PSQL -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;"
+$PSQL -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO PUBLIC;"
 
 # Create .env file
 echo "📝 Creating .env file..."
@@ -156,7 +162,7 @@ fi
 ln -sf /opt/homebrew/etc/nginx/sites-available/school-library /opt/homebrew/etc/nginx/sites-enabled/
 
 # Test nginx configuration
-nginx -t
+/opt/homebrew/bin/nginx -t
 
 # Start or reload nginx
 brew services restart nginx
