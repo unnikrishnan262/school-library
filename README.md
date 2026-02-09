@@ -130,7 +130,9 @@ After seeding:
 
 ## Production Deployment
 
-### Automated Setup (Recommended)
+### Linux (Ubuntu/Debian)
+
+#### Automated Setup (Recommended)
 
 Run the automated setup script on a fresh Ubuntu/Debian server:
 
@@ -156,7 +158,7 @@ The script will:
 7. Setup Nginx reverse proxy
 8. Schedule daily backups
 
-### Manual Setup
+#### Manual Setup (Linux)
 
 #### 1. Install Dependencies
 
@@ -261,6 +263,95 @@ crontab -e
 # Add line:
 # 0 2 * * * /opt/school-library/scripts/backup.sh
 ```
+
+### macOS
+
+#### Automated Setup (Recommended)
+
+Run the automated setup script on your Mac (macOS 12+ / Monterey or later):
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd school-library
+
+# Run macOS setup script (do NOT use sudo)
+./scripts/setup-macos.sh
+```
+
+The script will:
+1. Install Homebrew (if not already installed)
+2. Install Node.js 20, PostgreSQL 16, Nginx via Homebrew
+3. Create database with secure credentials
+4. Install application in `~/school-library`
+5. Build and configure the application
+6. Setup PM2 with launchd for auto-start
+7. Configure Nginx reverse proxy
+8. Schedule daily backups via launchd
+
+#### Post-Installation
+
+After setup completes:
+
+```bash
+# Check application status
+pm2 status
+
+# View logs
+pm2 logs school-library
+
+# Access the application
+# Direct: http://localhost:3000
+# Via Nginx: http://localhost
+```
+
+#### macOS-Specific Commands
+
+```bash
+# Start/stop services
+brew services start postgresql@16
+brew services stop postgresql@16
+brew services restart nginx
+
+# View Nginx logs
+tail -f /opt/homebrew/var/log/nginx/error.log
+tail -f /opt/homebrew/var/log/nginx/access.log
+
+# Access database
+psql -d school_library
+
+# Manual backup
+~/school-library/scripts/backup-macos.sh
+
+# View backup logs
+tail -f ~/school-library/logs/backup.log
+```
+
+#### Network Access (Optional)
+
+To access the application from other devices on your local network:
+
+1. Find your Mac's IP address:
+   - Open **System Settings → Network**
+   - Note your IP address (e.g., `192.168.1.100`)
+
+2. Update `.env` file:
+   ```bash
+   cd ~/school-library
+   nano .env
+   # Change NEXTAUTH_URL to: http://YOUR_MAC_IP:3000
+   ```
+
+3. Restart the application:
+   ```bash
+   pm2 restart school-library
+   ```
+
+4. Access from other devices: `http://YOUR_MAC_IP` or `http://YOUR_MAC_IP:3000`
+
+5. Configure macOS Firewall (if enabled):
+   - **System Settings → Network → Firewall → Options**
+   - Allow incoming connections for Node and Nginx
 
 ## Database Management
 
