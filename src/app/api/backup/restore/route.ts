@@ -37,9 +37,11 @@ export async function POST(request: Request) {
 
     // WARNING: This drops and recreates the database
     // Run psql to restore
-    const command = `PGPASSWORD="${password}" psql -h ${host} -p ${port} -U ${username} -d ${database} -f "${filepath}"`;
+    const command = `psql -h ${host} -p ${port} -U ${username} -d ${database} -f "${filepath}"`;
 
-    await execAsync(command);
+    await execAsync(command, {
+      env: { ...process.env, PGPASSWORD: password },
+    });
 
     await logAudit({
       userId: auth.session!.user.id,

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Settings2, FileText, Database } from "lucide-react";
+import { Settings2, FileText, Database, GraduationCap } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +32,12 @@ export default async function SettingsPage() {
             icon={<Database className="h-8 w-8 text-primary" />}
             title="Backup & Restore"
             description="Create and restore database backups"
+          />
+          <SettingCard
+            href="/settings/classes-sections"
+            icon={<GraduationCap className="h-8 w-8 text-primary" />}
+            title="Classes & Sections"
+            description="Configure available classes and sections for students"
           />
         </div>
       </div>

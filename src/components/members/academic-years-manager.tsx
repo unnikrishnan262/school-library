@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,9 +29,6 @@ interface Student {
   academicYear: { year: string };
 }
 
-const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-const SECTIONS = ["A", "B", "C", "D", "E", "F"];
-
 export function AcademicYearsManager({
   years,
   students,
@@ -41,7 +38,18 @@ export function AcademicYearsManager({
 }) {
   const router = useRouter();
   const { toast, showToast, hideToast } = useToast();
+  const [classes, setClasses] = useState<string[]>([]);
+  const [sections, setSections] = useState<string[]>([]);
   const [newYear, setNewYear] = useState({ year: "", startDate: "", endDate: "" });
+
+  useEffect(() => {
+    fetch("/api/settings/classes-sections")
+      .then((r) => r.json())
+      .then((data) => {
+        setClasses(data.classes ?? []);
+        setSections(data.sections ?? []);
+      });
+  }, []);
   const [adding, setAdding] = useState(false);
   const [promoteTargetId, setPromoteTargetId] = useState("");
   const [promoting, setPromoting] = useState(false);
@@ -250,7 +258,7 @@ export function AcademicYearsManager({
                             <SelectValue placeholder="—" />
                           </SelectTrigger>
                           <SelectContent>
-                            {CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            {classes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -263,7 +271,7 @@ export function AcademicYearsManager({
                             <SelectValue placeholder="—" />
                           </SelectTrigger>
                           <SelectContent>
-                            {SECTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            {sections.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </TableCell>

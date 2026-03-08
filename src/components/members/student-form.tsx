@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,13 +33,21 @@ interface StudentFormProps {
   mode: "create" | "edit";
 }
 
-const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-const SECTIONS = ["A", "B", "C", "D", "E", "F"];
-
 export function StudentForm({ academicYears, initialData, mode }: StudentFormProps) {
   const router = useRouter();
   const { toast, showToast, hideToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [classes, setClasses] = useState<string[]>([]);
+  const [sections, setSections] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/settings/classes-sections")
+      .then((r) => r.json())
+      .then((data) => {
+        setClasses(data.classes ?? []);
+        setSections(data.sections ?? []);
+      });
+  }, []);
 
   const [form, setForm] = useState({
     name: initialData?.name || "",
@@ -128,7 +136,7 @@ export function StudentForm({ academicYears, initialData, mode }: StudentFormPro
               <Select value={form.class} onValueChange={(v) => update("class", v)}>
                 <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                 <SelectContent>
-                  {CLASSES.map((c) => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
+                  {classes.map((c) => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -137,7 +145,7 @@ export function StudentForm({ academicYears, initialData, mode }: StudentFormPro
               <Select value={form.section} onValueChange={(v) => update("section", v)}>
                 <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
                 <SelectContent>
-                  {SECTIONS.map((s) => <SelectItem key={s} value={s}>Section {s}</SelectItem>)}
+                  {sections.map((s) => <SelectItem key={s} value={s}>Section {s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

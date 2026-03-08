@@ -39,8 +39,8 @@ export function AuditLogViewer() {
   const [data, setData] = useState<AuditLogsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [action, setAction] = useState("");
-  const [entity, setEntity] = useState("");
+  const [action, setAction] = useState("all");
+  const [entity, setEntity] = useState("all");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -51,8 +51,8 @@ export function AuditLogViewer() {
     setLoading(true);
     const params = new URLSearchParams({
       page: page.toString(),
-      ...(action && { action }),
-      ...(entity && { entity }),
+      ...(action && action !== "all" && { action }),
+      ...(entity && entity !== "all" && { entity }),
       ...(search && { userId: search }),
     });
     const res = await fetch(`/api/audit-logs?${params}`);
@@ -84,7 +84,7 @@ export function AuditLogViewer() {
               <SelectValue placeholder="All actions" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All actions</SelectItem>
+              <SelectItem value="all">All actions</SelectItem>
               <SelectItem value="CREATE">CREATE</SelectItem>
               <SelectItem value="UPDATE">UPDATE</SelectItem>
               <SelectItem value="DELETE">DELETE</SelectItem>
@@ -97,7 +97,7 @@ export function AuditLogViewer() {
               <SelectValue placeholder="All entities" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All entities</SelectItem>
+              <SelectItem value="all">All entities</SelectItem>
               <SelectItem value="book">Book</SelectItem>
               <SelectItem value="student">Student</SelectItem>
               <SelectItem value="staff">Staff</SelectItem>

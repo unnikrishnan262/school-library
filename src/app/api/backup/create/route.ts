@@ -37,9 +37,11 @@ export async function POST(request: Request) {
     const password = url.password;
 
     // Run pg_dump
-    const command = `PGPASSWORD="${password}" pg_dump -h ${host} -p ${port} -U ${username} -d ${database} -F p -f "${filepath}"`;
+    const command = `pg_dump -h ${host} -p ${port} -U ${username} -d ${database} -F p -f "${filepath}"`;
 
-    await execAsync(command);
+    await execAsync(command, {
+      env: { ...process.env, PGPASSWORD: password },
+    });
 
     await logAudit({
       userId: auth.session!.user.id,
