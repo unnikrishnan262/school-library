@@ -60,15 +60,19 @@ brew services start postgresql@16
 echo "Waiting for PostgreSQL to start..."
 sleep 5
 
+# Determine project root (parent of the directory containing this script)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Create application directory in user's home
 APP_DIR="$HOME/school-library"
 echo "📁 Creating application directory at $APP_DIR..."
 mkdir -p $APP_DIR
 
-# Copy application files (assumes script is run from project root)
+# Copy application files from project root
 echo "📁 Copying application files..."
 rsync -av --exclude='node_modules' --exclude='.next' --exclude='.git' --exclude='backups' \
-    . $APP_DIR/
+    "$PROJECT_ROOT/" $APP_DIR/
 
 cd $APP_DIR
 

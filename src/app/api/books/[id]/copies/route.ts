@@ -43,6 +43,46 @@ export async function POST(
   return NextResponse.json(created, { status: 201 });
 }
 
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAuth(["ADMIN", "LIBRARIAN"]);
+  if (auth.error) return auth.error;
+
+  const { id: bookId } = await params;
+  const { searchParams } = new URL(request.url);
+  const copyId = searchParams.get("copyId");
+
+  if (!copyId) {
+    return NextResponse.json({ error: "copyId is required" }, { status: 400 });
+  }
+
+  const copy = await prisma.bookCopy.findUnique({ where: { id: copyId, bookId } });
+  if (!copy) {
+    return NextResponse.json({ error: "Copy not found" }, { status: 404 });
+  }
+  if (copy.status === "ISSUED" || copy.status === "RESERVED") {
+    return NextResponse.json(
+      { error: `Cannot delete a copy that is currently ${copy.status.toLowerCase()}` },
+      { status: 400 }
+    );
+  }
+
+  await prisma.bookCopy.delete({ where: { id: copyId } });
+
+  const [total, available] = await Promise.all([
+    prisma.bookCopy.count({ where: { bookId } }),
+    prisma.bookCopy.count({ where: { bookId, status: "AVAILABLE" } }),
+  ]);
+  await prisma.book.update({
+    where: { id: bookId },
+    data: { totalCopies: total, availableCopies: available },
+  });
+
+  return new NextResponse(null, { status: 204 });
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

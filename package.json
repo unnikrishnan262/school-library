@@ -2,6 +2,9 @@
   "name": "school-library",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "ts-node -P tsconfig.seed.json prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

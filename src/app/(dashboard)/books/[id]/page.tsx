@@ -8,21 +8,14 @@ import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddCopiesDialog } from "@/components/books/add-copies-dialog";
+import { CopiesTable } from "@/components/books/copies-table";
 
 const TYPE_LABELS: Record<string, string> = {
   BOOK: "Book", TEXTBOOK: "Textbook", REFERENCE: "Reference",
   MAGAZINE: "Magazine", DIGITAL: "Digital",
 };
 
-const STATUS_VARIANTS: Record<string, "success" | "destructive" | "warning" | "secondary"> = {
-  AVAILABLE: "success",
-  ISSUED: "destructive",
-  RESERVED: "warning",
-  LOST: "secondary",
-  DAMAGED: "secondary",
-};
 
 export default async function BookDetailPage({
   params,
@@ -117,40 +110,7 @@ export default async function BookDetailPage({
             {canManage && <AddCopiesDialog bookId={book.id} />}
           </CardHeader>
           <CardContent>
-            {book.copies.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                No copies added yet.
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Accession No.</TableHead>
-                    <TableHead>Barcode</TableHead>
-                    <TableHead>Condition</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {book.copies.map((copy) => (
-                    <TableRow key={copy.id}>
-                      <TableCell className="font-mono font-medium">
-                        {copy.accessionNumber}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {copy.barcode || "—"}
-                      </TableCell>
-                      <TableCell>{copy.condition}</TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANTS[copy.status] || "secondary"}>
-                          {copy.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <CopiesTable bookId={book.id} copies={book.copies} canManage={canManage} />
           </CardContent>
         </Card>
       </div>
