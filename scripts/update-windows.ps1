@@ -120,12 +120,14 @@ Write-Log "[4/5] Build complete." "Green"
 # ── Step 5: Reload PM2 (zero-downtime) ───────────────────────────────────────
 Write-Log "[5/5] Reloading PM2 process..." "Green"
 
-$pm2List = & pm2 jlist 2>$null | ConvertFrom-Json
-$isRunning = $pm2List | Where-Object { $_.name -eq $APP_NAME -and $_.pm2_env.status -eq "online" }
+# pm2 jlist emits duplicate-key JSON that ConvertFrom-Json rejects.
+# Instead, attempt a reload directly; if the process isn't registered yet, start it.
+$ErrorActionPreference = "Continue"
+& pm2 reload $APP_NAME 2>&1 | Out-Null
+$reloadExit = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
 
-if ($isRunning) {
-    & pm2 reload $APP_NAME 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { Exit-WithError "pm2 reload failed." }
+if ($reloadExit -eq 0) {
     Write-Log "[5/5] Application reloaded (zero-downtime)." "Green"
 } else {
     & pm2 start ecosystem.config.js 2>&1 | Out-Null
