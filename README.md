@@ -305,7 +305,25 @@ pm2 logs school-library
 # Via Nginx: http://localhost
 ```
 
-#### macOS-Specific Commands
+#### Deploying Updates (Windows)
+
+After making code changes on your development machine, run from the project root:
+
+```powershell
+# Run as Administrator
+.\scripts\update-windows.ps1
+```
+
+The script will:
+1. Sync all source files to `C:\school-library` (skips `node_modules`, `.next`, `.git`, `backups`)
+2. Install any new dependencies (`npm install`)
+3. Apply pending database migrations (`prisma migrate deploy`)
+4. Build the application (`npm run build`)
+5. Reload PM2 with zero downtime (`pm2 reload`)
+
+If the build fails, the running application is **not** restarted — the old version stays live.
+
+### macOS-Specific Commands
 
 ```bash
 # Start/stop services
