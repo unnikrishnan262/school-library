@@ -105,8 +105,13 @@ Write-Log "[3/5] Migrations applied." "Green"
 # ── Step 4: Build application ─────────────────────────────────────────────────
 Write-Log "[4/5] Building application..." "Green"
 
+# Next.js writes deprecation warnings to stderr even on success.
+$ErrorActionPreference = "Continue"
 & npm run build 2>&1 | Tee-Object -Variable buildOut
-if ($LASTEXITCODE -ne 0) {
+$buildExit = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
+
+if ($buildExit -ne 0) {
     Write-Host ($buildOut -join "`n")
     Exit-WithError "Build failed. The running application has NOT been restarted."
 }
