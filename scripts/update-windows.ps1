@@ -83,11 +83,20 @@ Write-Log "[2/5] Dependencies installed." "Green"
 # ── Step 3: Apply database migrations ────────────────────────────────────────
 Write-Log "[3/5] Applying database migrations..." "Green"
 
+# Prisma writes informational messages to stderr even on success, which trips
+# ErrorActionPreference=Stop. Relax it just for these calls and rely on $LASTEXITCODE.
+$ErrorActionPreference = "Continue"
+
 & npx prisma generate 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) { Exit-WithError "prisma generate failed." }
+$prismaGenerateExit = $LASTEXITCODE
 
 & npx prisma migrate deploy 2>&1 | Tee-Object -Variable migrateOut
-if ($LASTEXITCODE -ne 0) {
+$prismaDeployExit = $LASTEXITCODE
+
+$ErrorActionPreference = "Stop"
+
+if ($prismaGenerateExit -ne 0) { Exit-WithError "prisma generate failed." }
+if ($prismaDeployExit -ne 0) {
     Write-Host ($migrateOut -join "`n")
     Exit-WithError "prisma migrate deploy failed."
 }
