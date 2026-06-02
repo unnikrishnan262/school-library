@@ -80,6 +80,22 @@ export async function DELETE(
     );
   }
 
-  await prisma.book.delete({ where: { id } });
+  // Schema has no cascade deletes — remove dependents in FK order before the book.
+  const copyIds = await prisma.bookCopy
+    .findMany({ where: { bookId: id }, select: { id: true } })
+    .then((rows) => rows.map((r) => r.id));
+
+  const txIds = await prisma.transaction
+    .findMany({ where: { bookCopyId: { in: copyIds } }, select: { id: true } })
+    .then((rows) => rows.map((r) => r.id));
+
+  await prisma.$transaction([
+    prisma.fine.deleteMany({ where: { transactionId: { in: txIds } } }),
+    prisma.transaction.deleteMany({ where: { id: { in: txIds } } }),
+    prisma.reservation.deleteMany({ where: { bookId: id } }),
+    prisma.bookCopy.deleteMany({ where: { bookId: id } }),
+    prisma.book.delete({ where: { id } }),
+  ]);
+
   return new NextResponse(null, { status: 204 });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/api-helpers";
 
@@ -16,31 +17,40 @@ export async function POST(
     return NextResponse.json({ error: "No copies provided" }, { status: 400 });
   }
 
-  const created = await prisma.$transaction(
-    copies.map((c: { accessionNumber: string; barcode?: string; condition?: string }) =>
-      prisma.bookCopy.create({
-        data: {
-          bookId,
-          accessionNumber: c.accessionNumber,
-          barcode: c.barcode || null,
-          condition: (c.condition as "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED") || "GOOD",
-          status: "AVAILABLE",
-        },
-      })
-    )
-  );
+  try {
+    const created = await prisma.$transaction(
+      copies.map((c: { accessionNumber: string; barcode?: string; condition?: string }) =>
+        prisma.bookCopy.create({
+          data: {
+            bookId,
+            accessionNumber: c.accessionNumber,
+            barcode: c.barcode || null,
+            condition: (c.condition as "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED") || "GOOD",
+            status: "AVAILABLE",
+          },
+        })
+      )
+    );
 
-  // Update book copy counts
-  const [total, available] = await Promise.all([
-    prisma.bookCopy.count({ where: { bookId } }),
-    prisma.bookCopy.count({ where: { bookId, status: "AVAILABLE" } }),
-  ]);
-  await prisma.book.update({
-    where: { id: bookId },
-    data: { totalCopies: total, availableCopies: available },
-  });
+    const [total, available] = await Promise.all([
+      prisma.bookCopy.count({ where: { bookId } }),
+      prisma.bookCopy.count({ where: { bookId, status: "AVAILABLE" } }),
+    ]);
+    await prisma.book.update({
+      where: { id: bookId },
+      data: { totalCopies: total, availableCopies: available },
+    });
 
-  return NextResponse.json(created, { status: 201 });
+    return NextResponse.json(created, { status: 201 });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json(
+        { error: "One or more accession numbers or barcodes are already in use" },
+        { status: 409 }
+      );
+    }
+    throw e;
+  }
 }
 
 export async function DELETE(
@@ -69,7 +79,16 @@ export async function DELETE(
     );
   }
 
-  await prisma.bookCopy.delete({ where: { id: copyId } });
+  // Delete historical transactions (and their fines) before the copy — no cascade in schema.
+  const txIds = await prisma.transaction
+    .findMany({ where: { bookCopyId: copyId }, select: { id: true } })
+    .then((rows) => rows.map((r) => r.id));
+
+  await prisma.$transaction([
+    prisma.fine.deleteMany({ where: { transactionId: { in: txIds } } }),
+    prisma.transaction.deleteMany({ where: { bookCopyId: copyId } }),
+    prisma.bookCopy.delete({ where: { id: copyId } }),
+  ]);
 
   const [total, available] = await Promise.all([
     prisma.bookCopy.count({ where: { bookId } }),
@@ -93,13 +112,23 @@ export async function PUT(
   const { id: bookId } = await params;
   const { copyId, accessionNumber, barcode, condition } = await request.json();
 
-  const copy = await prisma.bookCopy.update({
-    where: { id: copyId, bookId },
-    data: {
-      accessionNumber,
-      barcode: barcode || null,
-      condition: condition || "GOOD",
-    },
-  });
-  return NextResponse.json(copy);
+  try {
+    const copy = await prisma.bookCopy.update({
+      where: { id: copyId, bookId },
+      data: {
+        accessionNumber,
+        barcode: barcode || null,
+        condition: condition || "GOOD",
+      },
+    });
+    return NextResponse.json(copy);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json(
+        { error: "Accession number or barcode already in use" },
+        { status: 409 }
+      );
+    }
+    throw e;
+  }
 }
