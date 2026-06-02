@@ -102,23 +102,25 @@ $DB_PASSWORD = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | F
 
 $env:PGPASSWORD = "postgres123"
 
-# Create database and user (ignore errors if already exists)
+# Create database and user — always sync the password so .env and PostgreSQL stay in step
 $ErrorActionPreference = "Continue"
 & psql -U postgres -c "CREATE DATABASE $DB_NAME;" 2>$null
 if ($LASTEXITCODE -ne 0) { Write-Host "Database already exists, skipping." -ForegroundColor Yellow }
 
 & psql -U postgres -c "CREATE USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';" 2>$null
-if ($LASTEXITCODE -ne 0) { Write-Host "User already exists, skipping." -ForegroundColor Yellow }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "User already exists, resetting password to match .env..." -ForegroundColor Yellow
+    & psql -U postgres -c "ALTER USER $DB_USER WITH ENCRYPTED PASSWORD '$DB_PASSWORD';" 2>$null
+}
 
 & psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" 2>$null
 & psql -U postgres -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;" 2>$null
 $ErrorActionPreference = "Stop"
 
-# Create .env file (skip if already exists to preserve existing DB credentials)
-if (-not (Test-Path "$APP_DIR\.env")) {
-    Write-Host "[+] Creating .env file..." -ForegroundColor Green
-    $NEXTAUTH_SECRET = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-    $envContent = @"
+# Always write a fresh .env so the password matches what we just set in PostgreSQL
+Write-Host "[+] Writing .env file..." -ForegroundColor Green
+$NEXTAUTH_SECRET = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+$envContent = @"
 # Database
 DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}"
 
@@ -126,12 +128,8 @@ DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="$NEXTAUTH_SECRET"
 "@
-    $envContent | Out-File -FilePath "$APP_DIR\.env" -Encoding UTF8
-    Write-Host ""
-    Write-Host "[OK] Database credentials saved to .env" -ForegroundColor Green
-} else {
-    Write-Host "[OK] .env already exists, skipping." -ForegroundColor Yellow
-}
+$envContent | Out-File -FilePath "$APP_DIR\.env" -Encoding UTF8
+Write-Host "[OK] .env written with fresh credentials." -ForegroundColor Green
 Write-Host "   Database: $DB_NAME" -ForegroundColor Cyan
 Write-Host "   User: $DB_USER" -ForegroundColor Cyan
 Write-Host "   Password: $DB_PASSWORD" -ForegroundColor Cyan
