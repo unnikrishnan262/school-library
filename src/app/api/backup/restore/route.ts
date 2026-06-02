@@ -35,9 +35,11 @@ export async function POST(request: Request) {
     const username = url.username;
     const password = url.password;
 
-    // WARNING: This drops and recreates the database
-    // Run psql to restore
-    const command = `psql -h ${host} -p ${port} -U ${username} -d ${database} -f "${filepath}"`;
+    // --set ON_ERROR_STOP=on: abort immediately on any SQL error so a failed
+    // restore surfaces a real error instead of silently producing a partial state.
+    // (Backups created by this app include DROP TABLE IF EXISTS statements that
+    // cleanly replace existing data without constraint conflicts.)
+    const command = `psql --set ON_ERROR_STOP=on -h ${host} -p ${port} -U ${username} -d ${database} -f "${filepath}"`;
 
     await execAsync(command, {
       env: { ...process.env, PGPASSWORD: password },

@@ -37,7 +37,10 @@ export async function POST(request: Request) {
     const password = url.password;
 
     // Run pg_dump
-    const command = `pg_dump -h ${host} -p ${port} -U ${username} -d ${database} -F p -f "${filepath}"`;
+    // --clean --if-exists: emit DROP TABLE IF EXISTS before each CREATE TABLE so
+    // that restoring into a populated database replaces data instead of silently
+    // failing every COPY block due to primary-key / unique-name conflicts.
+    const command = `pg_dump --clean --if-exists -h ${host} -p ${port} -U ${username} -d ${database} -F p -f "${filepath}"`;
 
     await execAsync(command, {
       env: { ...process.env, PGPASSWORD: password },
