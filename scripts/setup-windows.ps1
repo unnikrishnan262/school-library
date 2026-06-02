@@ -139,13 +139,27 @@ Write-Host ""
 
 # Run Prisma migrations
 Write-Host "[DB] Running database migrations..." -ForegroundColor Green
-npx prisma generate
-npx prisma migrate deploy
-npm run db:seed
+$ErrorActionPreference = "Continue"
+& npx prisma generate 2>&1 | Out-Null
+$ErrorActionPreference = "Stop"
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: prisma generate failed." -ForegroundColor Red; exit 1 }
+
+$ErrorActionPreference = "Continue"
+& npx prisma migrate deploy 2>&1 | Out-Null
+$ErrorActionPreference = "Stop"
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: prisma migrate deploy failed." -ForegroundColor Red; exit 1 }
+
+$ErrorActionPreference = "Continue"
+& npm run db:seed 2>&1 | Out-Null
+$ErrorActionPreference = "Stop"
 
 # Build Next.js application
 Write-Host "[>] Building Next.js application..." -ForegroundColor Green
-npm run build
+$ErrorActionPreference = "Continue"
+& npm run build 2>&1 | Tee-Object -Variable buildOut
+$buildExit = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
+if ($buildExit -ne 0) { Write-Host ($buildOut -join "`n"); Write-Host "ERROR: Build failed." -ForegroundColor Red; exit 1 }
 
 # Create logs and backups directories
 Write-Host "[+] Creating logs and backups directories..." -ForegroundColor Green
