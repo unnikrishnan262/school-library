@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,13 +28,19 @@ const STATUS_VARIANTS: Record<string, "success" | "destructive" | "warning" | "s
 export function CopiesTable({
   bookId,
   copies,
-  canManage,
+  canManage: canManageFromServer,
 }: {
   bookId: string;
   copies: BookCopy[];
   canManage: boolean;
 }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  // Use client-side session as the source of truth; fall back to the server-passed prop
+  // so the button shows correctly even if getServerSession misbehaves on the server render.
+  const canManage =
+    canManageFromServer ||
+    ["ADMIN", "LIBRARIAN"].includes(session?.user?.role ?? "");
   const { toast, showToast, hideToast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
